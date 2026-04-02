@@ -1,0 +1,24 @@
+{
+  "name": "bolt.everything",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "corepack pnpm --filter @bolt-everything/contracts typecheck && corepack pnpm --filter @bolt-everything/workspace-contract typecheck && corepack pnpm --filter @bolt-everything/api typecheck",
+    "test": "corepack pnpm --filter @bolt-everything/contracts test && corepack pnpm --filter @bolt-everything/workspace-contract test && corepack pnpm --filter @bolt-everything/api test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.13.10",
+    "@types/pg": "^8.15.0",
+    "drizzle-kit": "^0.30.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}
