@@ -12,21 +12,23 @@ Use the reading order below when you are new to the repo or need to re-load the 
    Locks the MVP scope, explicit constraints, release bar, and out-of-scope features.
 3. [architecture.md](./architecture.md)
    Defines the authoritative system shape and the `Project Workspace Contract` boundary.
-4. [project-model.md](./project-model.md)
+4. [tech-stack.md](./tech-stack.md)
+   Locks the implementation stack and tooling choices that should not be guessed during scaffolding.
+5. [project-model.md](./project-model.md)
    Defines the core entities, lifecycle states, persistence split, and one-project-one-conversation model.
-5. [provider-strategy.md](./provider-strategy.md)
+6. [provider-strategy.md](./provider-strategy.md)
    Defines the only MVP provider abstraction and the validation and resolution rules around it.
-6. [onboarding.md](./onboarding.md)
+7. [onboarding.md](./onboarding.md)
    Defines the first-run and returning-user flows that get a user to the first successful project change.
-7. [swiftui-screen-map.md](./swiftui-screen-map.md)
+8. [swiftui-screen-map.md](./swiftui-screen-map.md)
    Maps the locked MVP into concrete SwiftUI screens, panes, sheets, and state rules.
-8. [backend-service-boundaries.md](./backend-service-boundaries.md)
+9. [backend-service-boundaries.md](./backend-service-boundaries.md)
    Defines backend ownership, service seams, and the allowed execution boundary.
-9. [workspace-contract-schema.md](./workspace-contract-schema.md)
+10. [workspace-contract-schema.md](./workspace-contract-schema.md)
    Defines the exact workspace operation schema and execution invariants for MVP.
-10. [api-contracts.md](./api-contracts.md)
+11. [api-contracts.md](./api-contracts.md)
     Defines the app-facing HTTP API that preserves the locked MVP behavior.
-11. [run-events.md](./run-events.md)
+12. [run-events.md](./run-events.md)
     Defines the ordered SSE run event stream used to render active assistant runs.
 
 ## Canonical Source Rule
