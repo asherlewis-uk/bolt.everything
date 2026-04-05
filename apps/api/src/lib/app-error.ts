@@ -1,3 +1,5 @@
+import { ZodError } from "zod";
+
 import { type ErrorCode, errorCodeSchema } from "@bolt-everything/contracts";
 
 export class AppError extends Error {
@@ -28,6 +30,19 @@ export function toErrorResponse(error: unknown) {
           code: error.code,
           message: error.message,
           details: error.details,
+        },
+      },
+    };
+  }
+
+  if (error instanceof ZodError) {
+    return {
+      statusCode: 400,
+      payload: {
+        error: {
+          code: "invalid_request" as const,
+          message: "Invalid request body.",
+          details: { issues: error.issues },
         },
       },
     };

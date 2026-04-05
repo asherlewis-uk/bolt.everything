@@ -10,19 +10,19 @@ const projectParamsSchema = z.object({
 });
 
 export function registerProjectRoutes(app: FastifyInstance, services: AppServices) {
-  app.get("/projects", async () => {
-    const user = await services.sessionService.requireActiveUser();
+  app.get("/projects", async (request) => {
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     return services.projectService.listProjects(user.id);
   });
 
   app.post("/projects", async (request) => {
-    const user = await services.sessionService.requireActiveUser();
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     const payload = createProjectRequestSchema.parse(request.body);
     return services.projectService.createProject(user.id, payload);
   });
 
   app.get("/projects/:projectId", async (request) => {
-    const user = await services.sessionService.requireActiveUser();
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     const params = projectParamsSchema.parse(request.params);
     return services.projectService.getProject(user.id, params.projectId);
   });

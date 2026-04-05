@@ -6,6 +6,7 @@ import Observation
 public final class AuthBootstrapViewModel {
     public enum Resolution: Equatable {
         case welcome
+        case signIn
         case providerSetup
         case projectsList
     }
@@ -33,6 +34,10 @@ public final class AuthBootstrapViewModel {
             let bootstrap = try await bootstrapService.loadBootstrap()
             isLoading = false
             return bootstrap.providerSetupRequired ? .providerSetup : .projectsList
+        } catch APIClientError.unauthorized {
+            // No valid session — route directly to sign-in without showing an error.
+            isLoading = false
+            return .signIn
         } catch {
             isLoading = false
             errorMessage = error.localizedDescription

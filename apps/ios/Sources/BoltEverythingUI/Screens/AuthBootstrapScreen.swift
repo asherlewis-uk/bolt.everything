@@ -6,17 +6,20 @@ public struct AuthBootstrapScreen: View {
     private let onWelcome: () -> Void
     private let onProviderSetup: () -> Void
     private let onProjectsList: () -> Void
+    private let onSignIn: () -> Void
 
     public init(
         viewModel: AuthBootstrapViewModel,
         onWelcome: @escaping () -> Void,
         onProviderSetup: @escaping () -> Void,
-        onProjectsList: @escaping () -> Void
+        onProjectsList: @escaping () -> Void,
+        onSignIn: @escaping () -> Void
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onWelcome = onWelcome
         self.onProviderSetup = onProviderSetup
         self.onProjectsList = onProjectsList
+        self.onSignIn = onSignIn
     }
 
     public var body: some View {
@@ -86,6 +89,8 @@ public struct AuthBootstrapScreen: View {
         switch resolution {
         case .welcome:
             onWelcome()
+        case .signIn:
+            onSignIn()
         case .providerSetup:
             onProviderSetup()
         case .projectsList:

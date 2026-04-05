@@ -13,9 +13,14 @@
   "dependencies": {
     "@bolt-everything/contracts": "workspace:*",
     "@bolt-everything/workspace-contract": "workspace:*",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/rate-limit": "^10.3.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.3",
     "fastify": "^5.2.1",
+    "jose": "^6.2.2",
     "pg": "^8.13.3",
     "zod": "^3.24.2"
   }

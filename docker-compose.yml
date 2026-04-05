@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bolt
+      POSTGRES_PASSWORD: bolt
+      POSTGRES_DB: bolt_everything
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bolt -d bolt_everything"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgres://bolt:bolt@db:5432/bolt_everything
+      SESSION_COOKIE_NAME: bolt_session
+      # Override these in a .env file or with real values for production.
+      SESSION_SECRET: dev-secret-at-least-32-chars-long!!
+      APPLE_SERVICES_ID: ""
+      CORS_ORIGIN: ""
+
+volumes:
+  postgres_data:

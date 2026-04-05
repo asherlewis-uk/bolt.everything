@@ -28,6 +28,7 @@ export const exportStatusSchema = z.enum(["queued", "ready", "failed"]);
 
 export const errorCodeSchema = z.enum([
   "auth_required",
+  "invalid_request",
   "provider_validation_failed",
   "provider_required",
   "unknown_model",

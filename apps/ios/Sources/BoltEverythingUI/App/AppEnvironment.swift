@@ -1,15 +1,18 @@
 import Foundation
 
 public struct AppEnvironment {
+    public var apiClient: APIClient
     public var bootstrapService: any BootstrapServicing
     public var providerProfileService: any ProviderProfileServicing
     public var projectService: any ProjectServicing
 
     public init(
+        apiClient: APIClient,
         bootstrapService: any BootstrapServicing,
         providerProfileService: any ProviderProfileServicing,
         projectService: any ProjectServicing
     ) {
+        self.apiClient = apiClient
         self.bootstrapService = bootstrapService
         self.providerProfileService = providerProfileService
         self.projectService = projectService
@@ -18,6 +21,7 @@ public struct AppEnvironment {
     public static func live(baseURL: URL) -> AppEnvironment {
         let apiClient = APIClient(baseURL: baseURL)
         return AppEnvironment(
+            apiClient: apiClient,
             bootstrapService: LiveBootstrapService(apiClient: apiClient),
             providerProfileService: LiveProviderProfileService(apiClient: apiClient),
             projectService: LiveProjectService(apiClient: apiClient)
@@ -25,6 +29,7 @@ public struct AppEnvironment {
     }
 
     public static let preview = AppEnvironment(
+        apiClient: APIClient(baseURL: URL(string: "http://localhost:3000")!),
         bootstrapService: PreviewBootstrapService(),
         providerProfileService: PreviewProviderProfileService(),
         projectService: PreviewProjectService()

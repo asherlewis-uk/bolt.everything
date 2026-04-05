@@ -1,6 +1,15 @@
+import { randomBytes } from "node:crypto";
+import cookie from "@fastify/cookie";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyInstance } from "fastify";
 
+import { env } from "./config/env.js";
+import { getDatabaseClient } from "./db/client.js";
+import { createDrizzleStore } from "./db/drizzle-store.js";
 import { toErrorResponse } from "./lib/app-error.js";
+import { registerAuthMiddleware } from "./lib/auth-middleware.js";
 import { registerV1Routes } from "./routes/v1/index.js";
 import { createDevMemoryStore } from "./services/dev-memory-store.js";
 import { ProjectService } from "./services/project-service.js";
@@ -8,6 +17,10 @@ import { ProviderProfileService } from "./services/provider-profile-service.js";
 import { SessionService } from "./services/session-service.js";
 import { SnapshotService } from "./services/snapshot-service.js";
 import { WorkspaceServiceAdapter } from "./services/workspace-service-adapter.js";
+
+// Stable per-process fallback used only when SESSION_SECRET is not configured (dev/test).
+// Intentionally non-deterministic so it cannot be predicted by an external party.
+const DEV_SESSION_SECRET = randomBytes(32).toString("hex");
 
 export interface AppServices {
   sessionService: SessionService;
@@ -19,10 +32,51 @@ export interface AppServices {
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
-    logger: false,
+    logger: {
+      level: env.NODE_ENV === "test" ? "silent" : "info",
+      redact: {
+        paths: ["req.headers.cookie", "req.headers.authorization", "body.apiKey"],
+        censor: "[REDACTED]",
+      },
+    },
+    // Only trust proxy headers when deployed behind a reverse proxy (production).
+    // Enabling unconditionally allows clients to spoof X-Forwarded-For and defeat rate limiting.
+    trustProxy: env.NODE_ENV === "production",
+    bodyLimit: 1_048_576, // 1 MB
   });
 
-  const store = createDevMemoryStore();
+  // ----------------------------------------------------------------- security
+  void app.register(helmet, {
+    // Allow same-origin iframes for the in-app preview WebView.
+    contentSecurityPolicy: false,
+  });
+
+  void app.register(cors, {
+    origin: env.CORS_ORIGIN ? env.CORS_ORIGIN.split(",") : false,
+    credentials: true,
+  });
+
+  void app.register(rateLimit, {
+    max: 120,
+    timeWindow: "1 minute",
+    keyGenerator: (request) => request.ip,
+  });
+
+  void app.register(cookie, {
+    secret: env.SESSION_SECRET ?? DEV_SESSION_SECRET,
+    hook: "onRequest",
+  });
+
+  // -------------------------------------------------------------- store / DI
+  const dbClient = getDatabaseClient();
+  const store = dbClient ? createDrizzleStore(dbClient) : createDevMemoryStore();
+
+  if (dbClient) {
+    app.log.info("Using Drizzle PostgreSQL store.");
+  } else {
+    app.log.warn("DATABASE_URL not set — using in-memory store. Data will be lost on restart.");
+  }
+
   const workspaceServiceAdapter = new WorkspaceServiceAdapter();
   const snapshotService = new SnapshotService(store, workspaceServiceAdapter);
   const sessionService = new SessionService(store);
@@ -42,11 +96,20 @@ export function buildApp(): FastifyInstance {
     workspaceServiceAdapter,
   };
 
+  // --------------------------------------------------------- auth middleware
+  registerAuthMiddleware(app);
+
+  // ------------------------------------------------------------ error handler
   app.setErrorHandler((error, _request, reply) => {
     const { statusCode, payload } = toErrorResponse(error);
+    if (statusCode >= 500) {
+      app.log.error(error, "Unhandled server error");
+    }
     reply.status(statusCode).send(payload);
   });
 
+  // ------------------------------------------------------------------ routes
   registerV1Routes(app, services);
+
   return app;
 }
