@@ -69,12 +69,19 @@ export function createDrizzleStore(db: DB): AppStore {
     },
 
     async createUser(user) {
-      await db.insert(usersTable).values({
-        id: user.id,
-        appleSubjectId: user.appleSubjectId,
-        createdAt: new Date(user.createdAt),
-        defaultProviderProfileId: user.defaultProviderProfileId ?? null,
-      });
+      // onConflictDoNothing guards against a race where two concurrent sign-ins
+      // for the same Apple subject ID both pass the "user not found" check and
+      // attempt to insert.  The losing INSERT is silently ignored; the caller
+      // re-fetches the winning row.
+      await db
+        .insert(usersTable)
+        .values({
+          id: user.id,
+          appleSubjectId: user.appleSubjectId,
+          createdAt: new Date(user.createdAt),
+          defaultProviderProfileId: user.defaultProviderProfileId ?? null,
+        })
+        .onConflictDoNothing();
     },
 
     async updateUser(user) {

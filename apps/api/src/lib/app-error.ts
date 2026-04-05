@@ -40,7 +40,7 @@ export function toErrorResponse(error: unknown) {
       statusCode: 400,
       payload: {
         error: {
-          code: "forbidden_operation" as const,
+          code: "invalid_request" as const,
           message: "Invalid request body.",
           details: { issues: error.issues },
         },

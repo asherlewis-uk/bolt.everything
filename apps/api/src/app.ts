@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
@@ -17,6 +18,10 @@ import { SessionService } from "./services/session-service.js";
 import { SnapshotService } from "./services/snapshot-service.js";
 import { WorkspaceServiceAdapter } from "./services/workspace-service-adapter.js";
 
+// Stable per-process fallback used only when SESSION_SECRET is not configured (dev/test).
+// Intentionally non-deterministic so it cannot be predicted by an external party.
+const DEV_SESSION_SECRET = randomBytes(32).toString("hex");
+
 export interface AppServices {
   sessionService: SessionService;
   providerProfileService: ProviderProfileService;
@@ -34,7 +39,9 @@ export function buildApp(): FastifyInstance {
         censor: "[REDACTED]",
       },
     },
-    trustProxy: true,
+    // Only trust proxy headers when deployed behind a reverse proxy (production).
+    // Enabling unconditionally allows clients to spoof X-Forwarded-For and defeat rate limiting.
+    trustProxy: env.NODE_ENV === "production",
     bodyLimit: 1_048_576, // 1 MB
   });
 
@@ -52,12 +59,11 @@ export function buildApp(): FastifyInstance {
   void app.register(rateLimit, {
     max: 120,
     timeWindow: "1 minute",
-    // Stricter limits on auth endpoints to mitigate brute-force.
     keyGenerator: (request) => request.ip,
   });
 
   void app.register(cookie, {
-    secret: env.SESSION_SECRET ?? "dev-secret-change-in-production",
+    secret: env.SESSION_SECRET ?? DEV_SESSION_SECRET,
     hook: "onRequest",
   });
 

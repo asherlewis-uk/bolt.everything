@@ -5,6 +5,7 @@ import {
 } from "@bolt-everything/contracts";
 
 import { AppError } from "../lib/app-error.js";
+import { createId } from "../lib/id.js";
 import type { AppStore } from "./dev-memory-store.js";
 
 export class SessionService {
@@ -30,16 +31,18 @@ export class SessionService {
     const existing = await this.store.getUserByAppleSubjectId(appleSubjectId);
     if (existing) return existing;
 
-    const { createId } = await import("../lib/id.js");
     const now = new Date().toISOString();
-    const user: User = {
+    const candidate: User = {
       id: createId("usr"),
       appleSubjectId,
       createdAt: now,
       defaultProviderProfileId: null,
     };
-    await this.store.createUser(user);
-    return user;
+    // createUser uses onConflictDoNothing in the Drizzle store, so a concurrent
+    // sign-in that won the insert race will have already written the user row.
+    // We re-fetch to return whichever row actually persisted.
+    await this.store.createUser(candidate);
+    return (await this.store.getUserByAppleSubjectId(appleSubjectId)) ?? candidate;
   }
 
   public async getBootstrap(userId: string): Promise<BootstrapResponse> {

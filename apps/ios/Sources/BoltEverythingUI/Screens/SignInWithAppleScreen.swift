@@ -46,9 +46,8 @@ public struct SignInWithAppleScreen: View {
 
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.email]
-                    // A random nonce ties this request to the backend validation,
-                    // preventing replay attacks.  The raw nonce is stored on the
-                    // view model; the hashed version is passed to Apple.
+                    // TODO: Set request.nonce to a SHA-256 hash of a locally generated
+                    // random nonce before going to production, to prevent replay attacks.
                 } onCompletion: { result in
                     Task { await handleCompletion(result) }
                 }
