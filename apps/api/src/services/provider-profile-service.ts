@@ -17,15 +17,16 @@ import {
 
 import { AppError } from "../lib/app-error.js";
 import { createId } from "../lib/id.js";
-import type { DevMemoryStore } from "./dev-memory-store.js";
+import type { AppStore } from "./dev-memory-store.js";
 
 export class ProviderProfileService {
-  public constructor(private readonly store: DevMemoryStore) {}
+  public constructor(private readonly store: AppStore) {}
 
   public async listProviderProfiles(userId: string): Promise<ProviderProfileSummary[]> {
-    const user = this.store.getUser();
+    const user = await this.store.getUserById(userId);
+    const profiles = await this.store.listProviderProfiles(userId);
 
-    return this.store.listProviderProfiles(userId).map((profile) =>
+    return profiles.map((profile) =>
       providerProfileSummarySchema.parse({
         id: profile.id,
         kind: profile.kind,
@@ -35,7 +36,7 @@ export class ProviderProfileService {
         defaultModel: profile.defaultModel,
         validatedAt: profile.validatedAt,
         status: profile.status,
-        isDefault: user.defaultProviderProfileId === profile.id,
+        isDefault: user?.defaultProviderProfileId === profile.id,
       }),
     );
   }
@@ -89,14 +90,11 @@ export class ProviderProfileService {
       updatedAt: timestamp,
     });
 
-    this.store.saveProviderProfile(profile);
+    await this.store.saveProviderProfile(profile);
 
-    const user = this.store.getUser();
-    if (!user.defaultProviderProfileId) {
-      this.store.updateUser({
-        ...user,
-        defaultProviderProfileId: profile.id,
-      });
+    const user = await this.store.getUserById(userId);
+    if (user && !user.defaultProviderProfileId) {
+      await this.store.updateUser({ ...user, defaultProviderProfileId: profile.id });
     }
 
     return createProviderProfileResponseSchema.parse({
@@ -116,7 +114,7 @@ export class ProviderProfileService {
     providerProfileId: string,
     input: UpdateProviderProfileRequest,
   ): Promise<CreateProviderProfileResponse> {
-    const existing = this.getOwnedProfileOrThrow(userId, providerProfileId);
+    const existing = await this.getOwnedProfileOrThrow(userId, providerProfileId);
     const mergedValidationInput = {
       kind: existing.kind,
       preset: existing.preset,
@@ -138,7 +136,7 @@ export class ProviderProfileService {
       updatedAt: validation.validatedAt,
     });
 
-    this.store.saveProviderProfile(updated);
+    await this.store.saveProviderProfile(updated);
 
     return createProviderProfileResponseSchema.parse({
       id: updated.id,
@@ -156,21 +154,23 @@ export class ProviderProfileService {
     userId: string,
     providerProfileId: string,
   ): Promise<MakeDefaultProviderProfileResponse> {
-    this.getOwnedProfileOrThrow(userId, providerProfileId);
+    await this.getOwnedProfileOrThrow(userId, providerProfileId);
 
-    const user = this.store.getUser();
-    this.store.updateUser({
-      ...user,
-      defaultProviderProfileId: providerProfileId,
-    });
+    const user = await this.store.getUserById(userId);
+    if (user) {
+      await this.store.updateUser({ ...user, defaultProviderProfileId: providerProfileId });
+    }
 
     return makeDefaultProviderProfileResponseSchema.parse({
       defaultProviderProfileId: providerProfileId,
     });
   }
 
-  public getValidatedProfileOrThrow(userId: string, providerProfileId: string): ProviderProfile {
-    const profile = this.getOwnedProfileOrThrow(userId, providerProfileId);
+  public async getValidatedProfileOrThrow(
+    userId: string,
+    providerProfileId: string,
+  ): Promise<ProviderProfile> {
+    const profile = await this.getOwnedProfileOrThrow(userId, providerProfileId);
 
     if (profile.status !== "validated") {
       throw new AppError(
@@ -183,14 +183,13 @@ export class ProviderProfileService {
     return profile;
   }
 
-  private getOwnedProfileOrThrow(userId: string, providerProfileId: string) {
-    const profile = this.store.getProviderProfile(userId, providerProfileId);
+  private async getOwnedProfileOrThrow(userId: string, providerProfileId: string) {
+    const profile = await this.store.getProviderProfile(userId, providerProfileId);
     if (!profile) {
       throw new AppError(404, "provider_required", "Provider profile not found.", {
         providerProfileId,
       });
     }
-
     return profile;
   }
 
@@ -203,10 +202,8 @@ export class ProviderProfileService {
           "Custom providers require an explicit base URL.",
         );
       }
-
       return input.baseUrl;
     }
-
     return providerBaseUrlByPreset[input.preset];
   }
 }

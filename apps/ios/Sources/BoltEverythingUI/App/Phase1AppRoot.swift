@@ -33,15 +33,16 @@ public struct Phase1AppRoot: View {
                 viewModel: AuthBootstrapViewModel(bootstrapService: environment.bootstrapService),
                 onWelcome: { route = .welcome },
                 onProviderSetup: { route = .providerSetup },
-                onProjectsList: { route = .projectsList }
+                onProjectsList: { route = .projectsList },
+                onSignIn: { route = .signIn }
             )
         case .welcome:
             WelcomeScreen {
                 route = .signIn
             }
         case .signIn:
-            SignInWithAppleScreen {
-                route = .providerSetup
+            SignInWithAppleScreen(apiClient: environment.apiClient) {
+                route = .authBootstrap
             }
         case .providerSetup:
             ProviderSetupFlow(

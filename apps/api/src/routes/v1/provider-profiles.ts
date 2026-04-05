@@ -14,8 +14,8 @@ const providerProfileParamsSchema = z.object({
 });
 
 export function registerProviderProfileRoutes(app: FastifyInstance, services: AppServices) {
-  app.get("/provider-profiles", async () => {
-    const user = await services.sessionService.requireActiveUser();
+  app.get("/provider-profiles", async (request) => {
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     return services.providerProfileService.listProviderProfiles(user.id);
   });
 
@@ -25,13 +25,13 @@ export function registerProviderProfileRoutes(app: FastifyInstance, services: Ap
   });
 
   app.post("/provider-profiles", async (request) => {
-    const user = await services.sessionService.requireActiveUser();
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     const payload = createProviderProfileRequestSchema.parse(request.body);
     return services.providerProfileService.createProviderProfile(user.id, payload);
   });
 
   app.patch("/provider-profiles/:providerProfileId", async (request) => {
-    const user = await services.sessionService.requireActiveUser();
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     const params = providerProfileParamsSchema.parse(request.params);
     const payload = updateProviderProfileRequestSchema.parse(request.body);
     return services.providerProfileService.updateProviderProfile(
@@ -42,7 +42,7 @@ export function registerProviderProfileRoutes(app: FastifyInstance, services: Ap
   });
 
   app.post("/provider-profiles/:providerProfileId/make-default", async (request) => {
-    const user = await services.sessionService.requireActiveUser();
+    const user = await services.sessionService.requireActiveUser(request.sessionUserId);
     const params = providerProfileParamsSchema.parse(request.params);
     return services.providerProfileService.makeDefaultProviderProfile(
       user.id,

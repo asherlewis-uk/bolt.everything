@@ -1,12 +1,12 @@
 import { type Project, type Snapshot, snapshotSchema } from "@bolt-everything/contracts";
 
 import { createId } from "../lib/id.js";
-import type { DevMemoryStore } from "./dev-memory-store.js";
+import type { AppStore } from "./dev-memory-store.js";
 import type { WorkspaceServiceAdapter } from "./workspace-service-adapter.js";
 
 export class SnapshotService {
   public constructor(
-    private readonly store: DevMemoryStore,
+    private readonly store: AppStore,
     private readonly workspaceServiceAdapter: WorkspaceServiceAdapter,
   ) {}
 
@@ -25,7 +25,7 @@ export class SnapshotService {
 
     // TODO: Invoke create_snapshot via the workspace contract once the real
     // workspace adapter can archive workspace state.
-    this.store.saveSnapshot(snapshot);
+    await this.store.saveSnapshot(snapshot);
     return snapshot;
   }
 }

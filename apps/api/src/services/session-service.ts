@@ -4,20 +4,49 @@ import {
   bootstrapResponseSchema,
 } from "@bolt-everything/contracts";
 
-import type { DevMemoryStore } from "./dev-memory-store.js";
+import { AppError } from "../lib/app-error.js";
+import type { AppStore } from "./dev-memory-store.js";
 
 export class SessionService {
-  public constructor(private readonly store: DevMemoryStore) {}
+  public constructor(private readonly store: AppStore) {}
 
-  public async requireActiveUser(): Promise<User> {
-    // TODO: Bind authenticated backend sessions to Sign in with Apple identities.
-    return this.store.getUser();
+  /**
+   * Resolves the authenticated user for the current request.
+   * The session cookie is validated by the auth middleware in app.ts before
+   * this is called; here we load the full user record from the store.
+   */
+  public async requireActiveUser(userId: string): Promise<User> {
+    const user = await this.store.getUserById(userId);
+    if (!user) {
+      throw new AppError(401, "auth_required", "Session user not found.");
+    }
+    return user;
   }
 
-  public async getBootstrap(): Promise<BootstrapResponse> {
-    const user = await this.requireActiveUser();
-    const recentProjects = this.store
-      .listProjects(user.id)
+  /**
+   * Used by the auth route on Sign in with Apple callback to find or create a user.
+   */
+  public async findOrCreateUser(appleSubjectId: string): Promise<User> {
+    const existing = await this.store.getUserByAppleSubjectId(appleSubjectId);
+    if (existing) return existing;
+
+    const { createId } = await import("../lib/id.js");
+    const now = new Date().toISOString();
+    const user: User = {
+      id: createId("usr"),
+      appleSubjectId,
+      createdAt: now,
+      defaultProviderProfileId: null,
+    };
+    await this.store.createUser(user);
+    return user;
+  }
+
+  public async getBootstrap(userId: string): Promise<BootstrapResponse> {
+    const user = await this.requireActiveUser(userId);
+
+    const allProjects = await this.store.listProjects(user.id);
+    const recentProjects = allProjects
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
       .slice(0, 10)
       .map((project) => ({
@@ -27,9 +56,8 @@ export class SessionService {
         updatedAt: project.updatedAt,
       }));
 
-    const providerSetupRequired = !this.store
-      .listProviderProfiles(user.id)
-      .some((profile) => profile.status === "validated");
+    const profiles = await this.store.listProviderProfiles(user.id);
+    const providerSetupRequired = !profiles.some((profile) => profile.status === "validated");
 
     return bootstrapResponseSchema.parse({
       user: {
