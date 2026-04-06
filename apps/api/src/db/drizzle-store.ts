@@ -8,21 +8,25 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import type {
   Conversation,
+  Message,
   PreviewSession,
   Project,
   ProviderProfile,
   Snapshot,
   User,
+  Workspace,
 } from "@bolt-everything/contracts";
 
 import type { AppStore } from "../services/dev-memory-store.js";
 import {
   conversationsTable,
+  messagesTable,
   previewSessionsTable,
   projectsTable,
   providerProfilesTable,
   snapshotsTable,
   usersTable,
+  workspacesTable,
 } from "./schema.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: Drizzle generics vary by schema config
@@ -89,6 +93,48 @@ export function createDrizzleStore(db: DB): AppStore {
         .update(usersTable)
         .set({ defaultProviderProfileId: user.defaultProviderProfileId ?? null })
         .where(eq(usersTable.id, user.id));
+    },
+
+    // --------------------------------------------------------------- workspaces
+
+    async saveWorkspace(workspace) {
+      await db
+        .insert(workspacesTable)
+        .values({
+          id: workspace.id,
+          projectId: workspace.projectId,
+          implementation: workspace.implementation,
+          storageRef: workspace.storageRef,
+          state: workspace.state,
+          lastReadyAt: workspace.lastReadyAt ? new Date(workspace.lastReadyAt) : null,
+          createdAt: new Date(workspace.createdAt),
+        })
+        .onConflictDoUpdate({
+          target: workspacesTable.id,
+          set: {
+            state: workspace.state,
+            lastReadyAt: workspace.lastReadyAt ? new Date(workspace.lastReadyAt) : null,
+          },
+        });
+    },
+
+    async getWorkspaceById(workspaceId) {
+      const rows = await db
+        .select()
+        .from(workspacesTable)
+        .where(eq(workspacesTable.id, workspaceId))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        id: row.id,
+        projectId: row.projectId,
+        implementation: row.implementation,
+        storageRef: row.storageRef,
+        state: row.state,
+        lastReadyAt: toIso(row.lastReadyAt),
+        createdAt: toIsoRequired(row.createdAt),
+      };
     },
 
     // --------------------------------------------------------- provider profiles
@@ -285,6 +331,42 @@ export function createDrizzleStore(db: DB): AppStore {
             title: conversation.title,
             lastMessageAt: conversation.lastMessageAt ? new Date(conversation.lastMessageAt) : null,
           },
+        });
+    },
+
+    // ----------------------------------------------------------------- messages
+
+    async listMessages(conversationId, limit) {
+      const query = db
+        .select()
+        .from(messagesTable)
+        .where(eq(messagesTable.conversationId, conversationId))
+        .orderBy(messagesTable.createdAt);
+      const rows = limit !== undefined ? await query.limit(limit) : await query;
+      return rows.map((row) => ({
+        id: row.id,
+        conversationId: row.conversationId,
+        role: row.role as Message["role"],
+        content: row.content,
+        runId: row.runId ?? null,
+        createdAt: toIsoRequired(row.createdAt),
+      }));
+    },
+
+    async saveMessage(message) {
+      await db
+        .insert(messagesTable)
+        .values({
+          id: message.id,
+          conversationId: message.conversationId,
+          role: message.role,
+          content: message.content,
+          runId: message.runId ?? null,
+          createdAt: new Date(message.createdAt),
+        })
+        .onConflictDoUpdate({
+          target: messagesTable.id,
+          set: { content: message.content },
         });
     },
 

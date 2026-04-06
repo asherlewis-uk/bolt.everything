@@ -15,12 +15,16 @@ import {
   providerProfileValidationResponseSchema,
 } from "@bolt-everything/contracts";
 
+import { decryptApiKey, encryptApiKey } from "../lib/api-key-crypto.js";
 import { AppError } from "../lib/app-error.js";
 import { createId } from "../lib/id.js";
 import type { AppStore } from "./dev-memory-store.js";
 
 export class ProviderProfileService {
-  public constructor(private readonly store: AppStore) {}
+  public constructor(
+    private readonly store: AppStore,
+    private readonly sessionSecret: string,
+  ) {}
 
   public async listProviderProfiles(userId: string): Promise<ProviderProfileSummary[]> {
     const user = await this.store.getUserById(userId);
@@ -82,7 +86,7 @@ export class ProviderProfileService {
       preset: input.preset,
       displayName: input.displayName,
       baseUrl: validation.resolvedBaseUrl,
-      apiKeyRef: `kms://todo/provider-profiles/${createId("key")}`,
+      apiKeyRef: encryptApiKey(input.apiKey, this.sessionSecret),
       defaultModel: validation.resolvedModel,
       validatedAt: validation.validatedAt,
       status: "validated",
@@ -120,7 +124,7 @@ export class ProviderProfileService {
       preset: existing.preset,
       displayName: input.displayName ?? existing.displayName,
       baseUrl: input.baseUrl ?? existing.baseUrl,
-      apiKey: input.apiKey ?? "TODO_REPLACE_WITH_STORED_SECRET_LOOKUP",
+      apiKey: input.apiKey ?? decryptApiKey(existing.apiKeyRef, this.sessionSecret),
       defaultModel: input.defaultModel ?? existing.defaultModel,
     } as const;
 

@@ -1,10 +1,12 @@
 import type {
   Conversation,
+  Message,
   PreviewSession,
   Project,
   ProviderProfile,
   Snapshot,
   User,
+  Workspace,
 } from "@bolt-everything/contracts";
 
 /**
@@ -18,6 +20,9 @@ export interface AppStore {
   getUserByAppleSubjectId(appleSubjectId: string): Promise<User | null>;
   createUser(user: User): Promise<void>;
   updateUser(user: User): Promise<void>;
+  // Workspaces
+  saveWorkspace(workspace: Workspace): Promise<void>;
+  getWorkspaceById(workspaceId: string): Promise<Workspace | null>;
   // Provider profiles
   listProviderProfiles(userId: string): Promise<ProviderProfile[]>;
   getProviderProfile(userId: string, providerProfileId: string): Promise<ProviderProfile | null>;
@@ -29,6 +34,9 @@ export interface AppStore {
   // Conversations
   getConversationByProject(projectId: string): Promise<Conversation | null>;
   saveConversation(conversation: Conversation): Promise<void>;
+  // Messages
+  listMessages(conversationId: string, limit?: number): Promise<Message[]>;
+  saveMessage(message: Message): Promise<void>;
   // Snapshots
   saveSnapshot(snapshot: Snapshot): Promise<void>;
   listSnapshots(projectId: string): Promise<Snapshot[]>;
@@ -42,9 +50,11 @@ export type DevMemoryStore = AppStore;
 
 interface DevMemoryState {
   users: User[];
+  workspaces: Workspace[];
   providerProfiles: ProviderProfile[];
   projects: Project[];
   conversations: Conversation[];
+  messages: Message[];
   snapshots: Snapshot[];
   previewSessions: PreviewSession[];
 }
@@ -63,9 +73,11 @@ export function createDevMemoryStore(): AppStore {
         defaultProviderProfileId: null,
       },
     ],
+    workspaces: [],
     providerProfiles: [],
     projects: [],
     conversations: [],
+    messages: [],
     snapshots: [],
     previewSessions: [],
   };
@@ -81,6 +93,19 @@ export function createDevMemoryStore(): AppStore {
 
     async createUser(user) {
       state.users.push(user);
+    },
+
+    async saveWorkspace(workspace) {
+      const index = state.workspaces.findIndex((w) => w.id === workspace.id);
+      if (index >= 0) {
+        state.workspaces[index] = workspace;
+        return;
+      }
+      state.workspaces.push(workspace);
+    },
+
+    async getWorkspaceById(workspaceId) {
+      return state.workspaces.find((w) => w.id === workspaceId) ?? null;
     },
 
     async updateUser(user) {
@@ -144,6 +169,22 @@ export function createDevMemoryStore(): AppStore {
         return;
       }
       state.conversations.push(conversation);
+    },
+
+    async listMessages(conversationId, limit) {
+      const all = state.messages
+        .filter((m) => m.conversationId === conversationId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      return limit !== undefined ? all.slice(-limit) : all;
+    },
+
+    async saveMessage(message) {
+      const index = state.messages.findIndex((m) => m.id === message.id);
+      if (index >= 0) {
+        state.messages[index] = message;
+        return;
+      }
+      state.messages.push(message);
     },
 
     async saveSnapshot(snapshot) {

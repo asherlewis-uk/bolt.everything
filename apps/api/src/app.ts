@@ -77,10 +77,11 @@ export function buildApp(): FastifyInstance {
     app.log.warn("DATABASE_URL not set — using in-memory store. Data will be lost on restart.");
   }
 
-  const workspaceServiceAdapter = new WorkspaceServiceAdapter();
+  const sessionSecret = env.SESSION_SECRET ?? DEV_SESSION_SECRET;
+  const workspaceServiceAdapter = new WorkspaceServiceAdapter(store, env.WORKSPACE_BASE_DIR);
   const snapshotService = new SnapshotService(store, workspaceServiceAdapter);
   const sessionService = new SessionService(store);
-  const providerProfileService = new ProviderProfileService(store);
+  const providerProfileService = new ProviderProfileService(store, sessionSecret);
   const projectService = new ProjectService(
     store,
     providerProfileService,
