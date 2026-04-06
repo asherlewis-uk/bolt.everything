@@ -11,6 +11,8 @@ import {
   starterTemplateIdSchema,
 } from "./common.js";
 import {
+  conversationSchema,
+  messageSchema,
   previewSessionSchema,
   projectSchema,
   providerProfileSchema,
@@ -194,3 +196,44 @@ export type ProjectListItem = z.infer<typeof projectListItemSchema>;
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
 export type ProjectDetailResponse = z.infer<typeof projectDetailResponseSchema>;
+
+// --------------------------------------------------------- conversation
+
+export const conversationResponseSchema = z.object({
+  id: conversationSchema.shape.id,
+  projectId: conversationSchema.shape.projectId,
+  title: conversationSchema.shape.title,
+  lastMessageAt: conversationSchema.shape.lastMessageAt,
+  messages: z.array(
+    messageSchema.pick({ id: true, role: true, content: true, runId: true, createdAt: true }),
+  ),
+});
+
+export type ConversationResponse = z.infer<typeof conversationResponseSchema>;
+
+// --------------------------------------------------------- file browser
+
+export const fileListEntrySchema = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.enum(["file", "directory"]),
+  sizeBytes: z.number().int().nonnegative().optional(),
+});
+
+export const fileListResponseSchema = z.object({
+  path: z.string().min(1),
+  entries: z.array(fileListEntrySchema),
+});
+
+export const fileContentResponseSchema = z.object({
+  path: z.string().min(1),
+  content: z.string().optional(),
+  encoding: z.literal("utf-8"),
+  isBinary: z.boolean(),
+  isTruncated: z.boolean(),
+  sizeBytes: z.number().int().nonnegative(),
+});
+
+export type FileListEntry = z.infer<typeof fileListEntrySchema>;
+export type FileListResponse = z.infer<typeof fileListResponseSchema>;
+export type FileContentResponse = z.infer<typeof fileContentResponseSchema>;

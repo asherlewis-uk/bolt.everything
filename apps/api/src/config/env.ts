@@ -12,6 +12,9 @@ const baseSchema = z.object({
   SESSION_SECRET: z.string().optional(),
   APPLE_SERVICES_ID: z.string().optional(),
   CORS_ORIGIN: z.string().optional(),
+  // Base directory for persistent workspace storage.  In development this defaults
+  // to a temp location; in production it must point to a mounted persistent volume.
+  WORKSPACE_BASE_DIR: z.string().default("/tmp/bolt-workspaces"),
 });
 
 // In production all secrets must be present. Fail fast at startup if they are missing.

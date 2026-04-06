@@ -1,6 +1,9 @@
 import {
+  type Conversation,
   type CreateProjectRequest,
   type CreateProjectResponse,
+  type Message,
+  type Project,
   type ProjectDetailResponse,
   type ProjectListItem,
   conversationSchema,
@@ -25,6 +28,26 @@ export class ProjectService {
     private readonly workspaceServiceAdapter: WorkspaceServiceAdapter,
     private readonly snapshotService: SnapshotService,
   ) {}
+
+  /**
+   * Returns the raw Project record — used internally and by routes that need
+   * the project before doing further store lookups (e.g. conversation loading).
+   */
+  public async getProjectRecord(userId: string, projectId: string): Promise<Project> {
+    const project = await this.store.getProject(userId, projectId);
+    if (!project) {
+      throw new AppError(404, "project_not_found", "Project not found.", { projectId });
+    }
+    return project;
+  }
+
+  public async getConversationRecord(projectId: string): Promise<Conversation | null> {
+    return this.store.getConversationByProject(projectId);
+  }
+
+  public async listMessages(conversationId: string, limit?: number): Promise<Message[]> {
+    return this.store.listMessages(conversationId, limit);
+  }
 
   public async listProjects(userId: string): Promise<ProjectListItem[]> {
     const projects = await this.store.listProjects(userId);

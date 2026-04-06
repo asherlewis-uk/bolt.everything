@@ -11,7 +11,10 @@ export class SnapshotService {
   ) {}
 
   public async createInitialSnapshot(project: Project): Promise<Snapshot> {
-    void this.workspaceServiceAdapter;
+    const storageRef = await this.workspaceServiceAdapter.createSnapshot(
+      project.workspaceId,
+      "Initial project bootstrap",
+    );
 
     const createdAt = new Date().toISOString();
     const snapshot = snapshotSchema.parse({
@@ -19,12 +22,10 @@ export class SnapshotService {
       projectId: project.id,
       runId: null,
       label: "Initial project bootstrap",
-      storageRef: `snapshots/${project.id}/initial.tar.zst`,
+      storageRef,
       createdAt,
     });
 
-    // TODO: Invoke create_snapshot via the workspace contract once the real
-    // workspace adapter can archive workspace state.
     await this.store.saveSnapshot(snapshot);
     return snapshot;
   }

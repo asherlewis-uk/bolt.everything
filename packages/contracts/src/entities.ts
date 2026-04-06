@@ -109,6 +109,16 @@ export const previewSessionSchema = z.object({
   lastHeartbeatAt: isoUtcTimestampSchema.nullable(),
 });
 
+export const workspaceSchema = z.object({
+  id: entityIdSchema,
+  projectId: entityIdSchema,
+  implementation: z.string().min(1),
+  storageRef: z.string().min(1),
+  state: z.string().min(1),
+  lastReadyAt: isoUtcTimestampSchema.nullable(),
+  createdAt: isoUtcTimestampSchema,
+});
+
 export const exportSchema = z.object({
   id: entityIdSchema,
   projectId: entityIdSchema,
@@ -117,6 +127,7 @@ export const exportSchema = z.object({
   createdAt: isoUtcTimestampSchema,
 });
 
+export type Workspace = z.infer<typeof workspaceSchema>;
 export type User = z.infer<typeof userSchema>;
 export type ProviderProfile = z.infer<typeof providerProfileSchema>;
 export type Project = z.infer<typeof projectSchema>;
